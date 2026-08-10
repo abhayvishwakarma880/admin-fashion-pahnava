@@ -5,15 +5,11 @@ import {
   PlusCircle,
   Package,
   ShoppingBag,
-  Users,
-  BarChart3,
-  Settings,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
-  LogOut,
   X,
-  Layers
+  Layers,
+  Mail
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) => {
@@ -23,9 +19,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     { name: 'Add Product', path: '/add-product', icon: PlusCircle },
     { name: 'Products List', path: '/products', icon: Package, badge: '124' },
     { name: 'Orders', path: '/orders', icon: ShoppingBag, badge: '8 New', badgeColor: 'bg-[#C79A5B] text-slate-950 font-bold' },
-    { name: 'Customers', path: '/customers', icon: Users },
-    { name: 'Analytics', path: '/analytics', icon: BarChart3 },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    { name: 'Contacts', path: '/contacts', icon: Mail },
   ];
 
   return (
@@ -45,31 +39,33 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
         } ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}`}
       >
         {/* Header / Brand */}
-        <div className="h-16 flex items-center justify-center px-4 border-b border-[#2e251e]">
-          <div className="flex items-center gap-3 overflow-hidden">
+        <div className="h-16 flex items-center justify-center px-4 border-b border-[#2e251e] relative">
+          <div className="absolute left-4 flex items-center gap-2 lg:hidden">
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-[#251e17]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 overflow-hidden justify-center w-full">
             <img
               src="/logo.png"
               alt="Logo"
-              className="w-full h-10 rounded object-contain shrink-0"
+              className="h-10 rounded object-contain shrink-0"
             />
           </div>
 
-          {/* Mobile Close Button */}
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="lg:hidden p-1.5 rounded text-slate-400 hover:text-white hover:bg-[#251e17]"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          {/* Desktop Collapse Toggle */}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden lg:flex p-1.5 rounded text-slate-400 hover:text-white hover:bg-[#251e17] transition-colors"
-            title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-          >
-            {isCollapsed ? <ChevronRight className="w-5 h-5 text-[#C79A5B]" /> : <ChevronLeft className="w-5 h-5 text-[#C79A5B]" />}
-          </button>
+          <div className="absolute right-4 hidden lg:flex items-center gap-2">
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-[#251e17] transition-colors"
+              title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            >
+              {isCollapsed ? <ChevronRight className="w-5 h-5 text-[#C79A5B]" /> : <ChevronLeft className="w-5 h-5 text-[#C79A5B]" />}
+            </button>
+          </div>
         </div>
 
         {/* Navigation Menu */}

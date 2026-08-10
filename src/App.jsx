@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import AddProduct from './pages/AddProduct';
 import ProductsList from './pages/ProductsList';
 import Orders from './pages/Orders';
+import Contacts from './pages/Contacts';
 import Customers from './pages/Customers';
 import Settings from './pages/Settings';
 import Categories from './pages/Categories';
@@ -54,6 +55,7 @@ const App = () => {
           <Route path="add-product" element={<AddProduct />} />
           <Route path="products" element={<ProductsList />} />
           <Route path="orders" element={<Orders />} />
+          <Route path="contacts" element={<Contacts />} />
           <Route path="customers" element={<Customers />} />
           <Route path="analytics" element={<Dashboard />} />
           <Route path="settings" element={<Settings />} />
