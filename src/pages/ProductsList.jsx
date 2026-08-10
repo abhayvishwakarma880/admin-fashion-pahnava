@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Trash2, Loader2, Package, ToggleLeft, ToggleRight, Eye, X, Edit3, Check, Upload, Image as ImageIcon, Percent } from 'lucide-react';
+import { Search, Plus, Trash2, Loader2, Package, ToggleLeft, ToggleRight, Eye, X, Edit3, Check, Upload, Image as ImageIcon, Percent, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getProducts, updateProductStatus, deleteProduct, updateProduct, uploadImageApi } from '../api/productApi';
 import { getCategories } from '../api/categoryApi';
+
+const PRODUCTS_PER_PAGE = 10;
 
 const ProductsList = () => {
   const [products, setProducts] = useState([]);
@@ -12,6 +14,14 @@ const ProductsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedViewProduct, setSelectedViewProduct] = useState(null);
+
+  // Server-side pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Debounce timer ref
+  const searchTimerRef = useRef(null);
 
   // Edit Modal state
   const [editModal, setEditModal] = useState(false);
@@ -29,24 +39,91 @@ const ProductsList = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Fetch Products & Categories
-  const fetchData = async () => {
+  // Fetch categories once
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const catRes = await getCategories();
+        if (catRes.success) setCategories(catRes.categories || []);
+      } catch (err) {
+        console.error('Error loading categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Fetch products from server with pagination, search, category
+  const fetchProducts = useCallback(async (page = 1, search = '', category = 'All') => {
     try {
       setLoading(true);
-      const [prodRes, catRes] = await Promise.all([getProducts(), getCategories()]);
-      if (prodRes.success) setProducts(prodRes.products || []);
-      if (catRes.success) setCategories(catRes.categories || []);
+      const params = {
+        page,
+        limit: PRODUCTS_PER_PAGE,
+      };
+      if (search && search.trim()) {
+        params.search = search.trim();
+      }
+      if (category && category !== 'All') {
+        params.category = category;
+      }
+
+      const res = await getProducts(params);
+      if (res.success) {
+        setProducts(res.products || []);
+        setTotalProducts(res.total || res.count || 0);
+        setTotalPages(res.totalPages || 1);
+        setCurrentPage(res.page || page);
+      }
     } catch (error) {
-      console.error('Error loading products/categories:', error);
+      console.error('Error loading products:', error);
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Fetch products whenever page or category changes
+  useEffect(() => {
+    fetchProducts(currentPage, searchTerm, selectedCategory);
+  }, [currentPage, selectedCategory, fetchProducts]);
+
+  // Debounced search: reset to page 1 when search changes
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setCurrentPage(1);
+      fetchProducts(1, searchTerm, selectedCategory);
+    }, 400);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [searchTerm]);
+
+  // Reset page to 1 when category changes
+  const handleCategoryChange = (cat) => {
+    setSelectedCategory(cat);
+    setCurrentPage(1);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Pagination handlers
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
 
   // Open Edit Modal and prefill data
   const handleOpenEdit = (p) => {
@@ -143,7 +220,7 @@ const ProductsList = () => {
       if (res.success) {
         toast.success('Product updated successfully!');
         setEditModal(false);
-        fetchData();
+        fetchProducts(currentPage, searchTerm, selectedCategory);
       }
     } catch (error) {
       console.error('Update error:', error);
@@ -182,22 +259,14 @@ const ProductsList = () => {
       const res = await deleteProduct(id);
       if (res.success) {
         toast.success('Product deleted successfully');
-        fetchData();
+        fetchProducts(currentPage, searchTerm, selectedCategory);
       }
     } catch (error) {
       toast.error(error.message || 'Failed to delete product');
     }
   };
 
-  // Filter products
-  const filteredProducts = products.filter((p) => {
-    const categoryTitle = p.categoryid?.title || 'Uncategorized';
-    const matchesCategory = selectedCategory === 'All' || categoryTitle === selectedCategory;
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
+  // Products are already server-side filtered & paginated
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -236,7 +305,7 @@ const ProductsList = () => {
 
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
           <button
-            onClick={() => setSelectedCategory('All')}
+            onClick={() => handleCategoryChange('All')}
             className={`px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               selectedCategory === 'All'
                 ? 'bg-gradient-to-r from-[#774C13] to-[#925f1a] text-white shadow-md border border-[#C79A5B]/40'
@@ -248,7 +317,7 @@ const ProductsList = () => {
           {categories.map((cat) => (
             <button
               key={cat._id}
-              onClick={() => setSelectedCategory(cat.title)}
+              onClick={() => handleCategoryChange(cat.title)}
               className={`px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === cat.title
                   ? 'bg-gradient-to-r from-[#774C13] to-[#925f1a] text-white shadow-md border border-[#C79A5B]/40'
@@ -268,7 +337,7 @@ const ProductsList = () => {
             <Loader2 className="w-8 h-8 animate-spin text-[#C79A5B]" />
             <p className="text-xs font-medium">Loading products catalog...</p>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <div className="w-14 h-14 rounded-full bg-[#241c15] border border-[#342a20] flex items-center justify-center text-[#838280]">
               <Package className="w-7 h-7" />
@@ -295,7 +364,7 @@ const ProductsList = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2e251e] text-xs">
-              {filteredProducts.map((p) => (
+              {products.map((p) => (
                 <tr key={p._id} className="hover:bg-[#241c15] transition-colors group">
                   {/* Image Thumbnail */}
                   <td className="py-3.5 px-3">
@@ -403,6 +472,54 @@ const ProductsList = () => {
               ))}
             </tbody>
           </table>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 mt-4 border-t border-[#2e251e]">
+            <p className="text-xs text-[#838280]">
+              Showing <span className="font-bold text-white">{((currentPage - 1) * PRODUCTS_PER_PAGE) + 1}</span>
+              –<span className="font-bold text-white">{Math.min(currentPage * PRODUCTS_PER_PAGE, totalProducts)}</span>
+              {' '}of <span className="font-bold text-white">{totalProducts}</span> products
+            </p>
+
+            <div className="flex items-center gap-1">
+              {/* Previous */}
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-[#241c15] border border-[#382c20] text-[#838280] hover:text-white hover:bg-[#2d231b]"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Prev</span>
+              </button>
+
+              {/* Page Numbers */}
+              {getPageNumbers().map((p) => (
+                <button
+                  key={p}
+                  onClick={() => goToPage(p)}
+                  className={`w-8 h-8 rounded text-xs font-bold transition-all cursor-pointer ${
+                    currentPage === p
+                      ? 'bg-gradient-to-r from-[#774C13] to-[#925f1a] text-white shadow-md border border-[#C79A5B]/40'
+                      : 'bg-[#241c15] border border-[#382c20] text-[#838280] hover:text-white hover:bg-[#2d231b]'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+
+              {/* Next */}
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-[#241c15] border border-[#382c20] text-[#838280] hover:text-white hover:bg-[#2d231b]"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

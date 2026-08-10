@@ -63,12 +63,12 @@ const Navbar = ({ onMobileMenuToggle }) => {
       <div className="flex items-center gap-3">
         {/* View Live Store */}
         <a
-          href="http://localhost:3000"
+          href="https://fashion-pahnava.vercel.app/"
           target="_blank"
           rel="noopener noreferrer"
           className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-[#EADBC8] hover:text-white bg-[#221b15] hover:bg-[#2c221a] border border-[#362b21] px-3 py-2 rounded transition-colors"
         >
-          <span>Live Store</span>
+          <span>Live Website</span>
           <ExternalLink className="w-3.5 h-3.5 text-[#C79A5B]" />
         </a>
 
