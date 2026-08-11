@@ -35,6 +35,7 @@ const ProductsList = () => {
     discountPrice: '',
     image: '',
     isActive: true,
+    badge: 'default',
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -56,16 +57,9 @@ const ProductsList = () => {
   const fetchProducts = useCallback(async (page = 1, search = '', category = 'All') => {
     try {
       setLoading(true);
-      const params = {
-        page,
-        limit: PRODUCTS_PER_PAGE,
-      };
-      if (search && search.trim()) {
-        params.search = search.trim();
-      }
-      if (category && category !== 'All') {
-        params.category = category;
-      }
+      const params = { page, limit: PRODUCTS_PER_PAGE };
+      if (search && search.trim()) params.search = search.trim();
+      if (category && category !== 'All') params.category = category;
 
       const res = await getProducts(params);
       if (res.success) {
@@ -82,12 +76,18 @@ const ProductsList = () => {
     }
   }, []);
 
-  // Fetch products whenever page or category changes
+  // Fetch on page change only
   useEffect(() => {
     fetchProducts(currentPage, searchTerm, selectedCategory);
-  }, [currentPage, selectedCategory, fetchProducts]);
+  }, [currentPage]); // eslint-disable-line
 
-  // Debounced search: reset to page 1 when search changes
+  // Fetch on category change, reset page
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchProducts(1, searchTerm, selectedCategory);
+  }, [selectedCategory]); // eslint-disable-line
+
+  // Debounced search
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
@@ -95,12 +95,11 @@ const ProductsList = () => {
       fetchProducts(1, searchTerm, selectedCategory);
     }, 400);
     return () => clearTimeout(searchTimerRef.current);
-  }, [searchTerm]);
+  }, [searchTerm]); // eslint-disable-line
 
   // Reset page to 1 when category changes
   const handleCategoryChange = (cat) => {
     setSelectedCategory(cat);
-    setCurrentPage(1);
   };
 
   // Pagination handlers
@@ -140,6 +139,7 @@ const ProductsList = () => {
       discountPrice: discountPrice.toString(),
       image: p.image || '',
       isActive: Boolean(p.isActive),
+      badge: p.badge || 'default',
     });
     setEditModal(true);
   };
@@ -214,6 +214,7 @@ const ProductsList = () => {
         descountPrice: Number(editData.discountPrice) || Number(editData.price),
         image: editData.image.trim(),
         isActive: Boolean(editData.isActive),
+        badge: editData.badge || 'default',
       };
 
       const res = await updateProduct(editData._id, payload);
@@ -356,6 +357,7 @@ const ProductsList = () => {
                 <th className="pb-3 px-3 w-14">Image</th>
                 <th className="pb-3 px-3">Product Name</th>
                 <th className="pb-3 px-3">Category</th>
+                <th className="pb-3 px-3">Badge</th>
                 <th className="pb-3 px-3">Regular Price</th>
                 <th className="pb-3 px-3">Discount (%)</th>
                 <th className="pb-3 px-3">Offer Price</th>
@@ -393,6 +395,23 @@ const ProductsList = () => {
                     <span className="px-2.5 py-1 rounded bg-[#2b2219] border border-[#3d3023] text-[#C79A5B] text-[11px]">
                       {p.categoryid?.title || 'Uncategorized'}
                     </span>
+                  </td>
+
+                  {/* Badge */}
+                  <td className="py-3.5 px-3">
+                    {p.badge && p.badge !== 'default' && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                        p.badge === 'trending' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                        p.badge === 'new arrivals' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                        p.badge === 'best seller' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                        'bg-[#2b2219] text-[#838280] border-[#3d3023]'
+                      }`}>
+                        {p.badge}
+                      </span>
+                    )}
+                    {(!p.badge || p.badge === 'default') && (
+                      <span className="text-[#838280] text-[11px]">—</span>
+                    )}
                   </td>
 
                   {/* Regular Price */}
@@ -542,7 +561,7 @@ const ProductsList = () => {
             </div>
 
             <form onSubmit={handleUpdate} className="space-y-4">
-              {/* Category & Name */}
+              {/* Category, Badge & Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-[#EADBC8] mb-1.5">
@@ -576,6 +595,21 @@ const ProductsList = () => {
                     className="w-full bg-[#241c15] border border-[#382c20] rounded px-4 py-2.5 text-xs text-slate-100 placeholder-[#838280] focus:outline-none focus:ring-2 focus:ring-[#C79A5B]/40"
                   />
                 </div>
+              </div>
+
+              {/* Badge */}
+              <div>
+                <label className="block text-xs font-semibold text-[#EADBC8] mb-1.5">Badge</label>
+                <select
+                  value={editData.badge}
+                  onChange={(e) => setEditData({ ...editData, badge: e.target.value })}
+                  className="w-full bg-[#241c15] border border-[#382c20] rounded px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#C79A5B]/40 cursor-pointer"
+                >
+                  <option value="default">Default</option>
+                  <option value="trending">Trending</option>
+                  <option value="new arrivals">New Arrivals</option>
+                  <option value="best seller">Best Seller</option>
+                </select>
               </div>
 
               {/* Description */}
@@ -774,6 +808,17 @@ const ProductsList = () => {
                 </div>
 
                 <h3 className="text-base font-bold text-white leading-tight">{selectedViewProduct.name}</h3>
+
+                {selectedViewProduct.badge && selectedViewProduct.badge !== 'default' && (
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                    selectedViewProduct.badge === 'trending' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                    selectedViewProduct.badge === 'new arrivals' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                    selectedViewProduct.badge === 'best seller' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                    'bg-[#2b2219] text-[#838280] border-[#3d3023]'
+                  }`}>
+                    {selectedViewProduct.badge}
+                  </span>
+                )}
 
                 <div className="bg-[#241c15] border border-[#342a20] rounded p-3 space-y-1.5">
                   <div className="flex items-center justify-between text-xs">

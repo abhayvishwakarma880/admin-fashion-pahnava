@@ -22,6 +22,7 @@ const AddProduct = () => {
     discountPrice: '',
     image: '',
     isActive: true,
+    badge: 'default',
   });
 
   // Fetch categories for categoryid dropdown
@@ -141,6 +142,7 @@ const AddProduct = () => {
         descountPrice: Number(formData.discountPrice) || Number(formData.price),
         image: formData.image.trim(),
         isActive: Boolean(formData.isActive),
+        badge: formData.badge || 'default',
       };
 
       const res = await createProduct(payload);
@@ -156,6 +158,7 @@ const AddProduct = () => {
           discountPrice: '',
           image: '',
           isActive: true,
+          badge: 'default',
         });
         setTimeout(() => {
           navigate('/products');
@@ -246,6 +249,21 @@ const AddProduct = () => {
                   ))}
                 </select>
               )}
+            </div>
+
+            {/* Badge */}
+            <div>
+              <label className="block text-xs font-semibold text-[#EADBC8] mb-1.5">Badge</label>
+              <select
+                value={formData.badge}
+                onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
+                className="w-full bg-[#241c15] border border-[#382c20] rounded px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#C79A5B]/40 focus:border-[#C79A5B] transition-all cursor-pointer"
+              >
+                <option value="default">Default</option>
+                <option value="trending">Trending</option>
+                <option value="new arrivals">New Arrivals</option>
+                <option value="best seller">Best Seller</option>
+              </select>
             </div>
 
             {/* Product Name */}
