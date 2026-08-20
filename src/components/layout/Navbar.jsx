@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
   Search,
@@ -16,6 +16,12 @@ import {
 const Navbar = ({ onMobileMenuToggle }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    navigate('/login', { replace: true });
+  };
 
   const notifications = [
     {
@@ -102,7 +108,7 @@ const Navbar = ({ onMobileMenuToggle }) => {
               </div>
               <div className="my-1 border-t border-[#2e251e]" />
               <button
-                onClick={() => setShowProfileMenu(false)}
+                onClick={handleLogout}
                 className="w-full text-left flex items-center gap-2 px-3 py-2 rounded text-rose-400 hover:bg-rose-500/10"
               >
                 Logout
